@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Subwoofer Port Calculator PRO</title>
+<style>
+:root {
+  --bg-color: #1c1c1c;
+  --text-color: #fff;
+  --accent-color: #00c853;
+  --input-bg: #2a2a2a;
+}
+body {
+  font-family: Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  margin: 0;
+  padding: 0;
+}
+.container {
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #222;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+label {
+  display: block;
+  margin: 10px 0 5px;
+}
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: none;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+button {
+  background-color: var(--accent-color);
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover {
+  background-color: #00e676;
+}
+.result {
+  margin-top: 20px;
+  font-size: 20px;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #333;
+}
+.toggle-theme {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: #444;
+  color: #fff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  line-height: 40px;
+  text-align: center;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="toggle-theme" onclick="toggleTheme()">🌗</div>
+
+<div class="container">
+<h1>Port Calculator PRO</h1>
+
+<label>Volum net Vb (litri)</label>
+<input type="number" id="vb" placeholder="Ex: 100">
+
+<label>Frecvență acord Fb (Hz)</label>
+<input type="number" id="fb" placeholder="Ex: 32">
+
+<label>Tip port</label>
+<select id="type">
+<option value="round">Round</option>
+<option value="slot">Slot</option>
+</select>
+
+<label>Diametru port D (cm) - pentru Round</label>
+<input type="number" id="diameter" placeholder="Ex: 19.5">
+
+<label>Lățime port (cm) - pentru Slot</label>
+<input type="number" id="width" placeholder="Ex: 10">
+
+<label>Înălțime port (cm) - pentru Slot</label>
+<input type="number" id="height" placeholder="Ex: 30">
+
+<label>Corecție capete (0=Normal,1=1 Flare,2=2 Flare)</label>
+<select id="flare">
+<option value="0">0</option>
+<option value="1">1</option>
+<option value="2">2</option>
+</select>
+
+<button onclick="calculate()">Calculează Lungimea Portului</button>
+
+<div class="result" id="result"></div>
+</div>
+
+<script>
+function calculate() {
+  let vb = parseFloat(document.getElementById("vb").value);
+  let fb = parseFloat(document.getElementById("fb").value);
+  let type = document.getElementById("type").value;
+  let diameter = parseFloat(document.getElementById("diameter").value);
+  let width = parseFloat(document.getElementById("width").value);
+  let height = parseFloat(document.getElementById("height").value);
+  let flare = parseInt(document.getElementById("flare").value);
+
+  // Validare
+  if (!vb || !fb) { alert("Completează Volum și Frecvență!"); return; }
+  if (type==="round" && !diameter) { alert("Introdu diametrul!"); return; }
+  if (type==="slot" && (!width || !height)) { alert("Introdu lățime și înălțime!"); return; }
+
+  // Calcul aria portului
+  let S;
+  if (type==="round") {
+    S = Math.PI * Math.pow(diameter/2,2);
+  } else {
+    S = width*height;
+  }
+
+  // Diametru echivalent
+  let Deq = Math.sqrt((4*S)/Math.PI);
+
+  // Corecție flare
+  let correction = 0;
+  if (flare===0) correction = 0.732*Deq;
+  if (flare===1) correction = 0.85*Deq;
+  if (flare===2) correction = 1.0*Deq;
+
+  // Lungime port
+  let L = ((23562.5 * Math.pow(Deq,2)) / (Math.pow(fb,2)*vb)) - correction;
+
+  document.getElementById("result").innerHTML = 
+    "Lungime port internă: <b>" + L.toFixed(2) + " cm</b><br>" +
+    "Diametru echivalent: <b>" + Deq.toFixed(2) + " cm</b>";
+}
+
+// Toggle light/dark theme
+function toggleTheme() {
+  let root = document.documentElement;
+  if (root.style.getPropertyValue('--bg-color')==='rgb(28, 28, 28)' || !root.style.getPropertyValue('--bg-color')) {
+    root.style.setProperty('--bg-color','#fff');
+    root.style.setProperty('--text-color','#000');
+    root.style.setProperty('--input-bg','#eee');
+    root.style.setProperty('--accent-color','#00c853');
+  } else {
+    root.style.setProperty('--bg-color','#1c1c1c');
+    root.style.setProperty('--text-color','#fff');
+    root.style.setProperty('--input-bg','#2a2a2a');
+    root.style.setProperty('--accent-color','#00c853');
+  }
+}
+</script>
+
+</body>
+</html>
