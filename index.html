@@ -2,124 +2,128 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BOX & PORT CALCULATOR EXPERT</title>
+<title>Configurator Incintă Audio Pro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
+
 <style>
-body{font-family:Arial;background:#0f0f0f;color:#fff;margin:0;padding:20px}
-.container{max-width:750px;margin:auto;background:#1b1b1b;padding:20px;border-radius:10px}
-h2{border-bottom:1px solid #333;padding-bottom:5px}
-input,select,button{width:100%;padding:8px;margin:5px 0;background:#222;color:#fff;border:none;border-radius:5px}
-button{background:#00c853;font-weight:bold;cursor:pointer}
-.result{background:#000;padding:15px;margin-top:15px;border-radius:8px}
-.warning{color:#ff5252;font-weight:bold}
-.ok{color:#00e676;font-weight:bold}
+body{
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    color:white;
+    display:flex;
+}
+#ui{
+    width:350px;
+    padding:25px;
+    background:rgba(0,0,0,0.5);
+    backdrop-filter:blur(10px);
+}
+input{
+    width:100%;
+    padding:8px;
+    margin:5px 0 15px 0;
+    border:none;
+    border-radius:5px;
+}
+button{
+    width:100%;
+    padding:10px;
+    background:#00c6ff;
+    border:none;
+    border-radius:5px;
+    font-weight:bold;
+    cursor:pointer;
+}
+#output{
+    margin-top:20px;
+    font-size:14px;
+}
+canvas{
+    flex:1;
+}
 </style>
 </head>
 <body>
 
-<div class="container">
-<h1>BOX + PORT CALCULATOR EXPERT (mm)</h1>
+<div id="ui">
+<h2>Configurator Incintă 3D</h2>
 
-<h2>Parametri Difuzor</h2>
-<input type="number" id="fs" placeholder="Fs (Hz)">
-<input type="number" id="vas" placeholder="Vas (litri)">
-<input type="number" id="qts" placeholder="Qts">
-<input type="number" id="sd" placeholder="Sd (cm²)">
-<input type="number" id="xmax" placeholder="Xmax (mm)">
-<input type="number" id="rms" placeholder="Putere RMS (W)">
+<label>Lățime (cm)</label>
+<input id="width" type="number" value="50">
 
-<h2>Dimensiuni Externe Incintă (mm)</h2>
-<input type="number" id="height" placeholder="Înălțime (mm)">
-<input type="number" id="width" placeholder="Lățime (mm)">
-<input type="number" id="depth" placeholder="Adâncime (mm)">
-<input type="number" id="thickness" placeholder="Grosime material (mm)">
+<label>Înălțime (cm)</label>
+<input id="height" type="number" value="40">
 
-<h2>Setări Acord</h2>
-<input type="number" id="fb" placeholder="Frecvență acord (Hz)">
+<label>Volum dorit (litri)</label>
+<input id="volume" type="number" value="100">
 
-<h2>Tip Port</h2>
-<select id="portType">
-<option value="round">Rotund</option>
-<option value="slot">Slot</option>
-</select>
+<label>Volum difuzor (litri)</label>
+<input id="speakerVol" type="number" value="2">
 
-<input type="number" id="diameter" placeholder="Diametru port (mm) - rotund">
-<input type="number" id="slotHeight" placeholder="Înălțime slot (mm) - slot">
+<label>Volum port slot (litri)</label>
+<input id="portVol" type="number" value="5">
 
-<button onclick="calculate()">CALCULEAZĂ</button>
+<button onclick="calculate()">Calculează</button>
 
-<div class="result" id="result"></div>
-
+<div id="output"></div>
 </div>
 
 <script>
+
+let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth-350, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+let controls = new THREE.OrbitControls(camera, renderer.domElement);
+camera.position.z = 200;
+
+let box;
+
+let light = new THREE.PointLight(0xffffff,1);
+light.position.set(100,100,100);
+scene.add(light);
+
 function calculate(){
 
-let vas=parseFloat(document.getElementById("vas").value);
-let qts=parseFloat(document.getElementById("qts").value);
-let sd=parseFloat(document.getElementById("sd").value);
-let xmax=parseFloat(document.getElementById("xmax").value);
-let rms=parseFloat(document.getElementById("rms").value);
+    let width = parseFloat(document.getElementById("width").value);
+    let height = parseFloat(document.getElementById("height").value);
+    let volumeLiters = parseFloat(document.getElementById("volume").value);
+    let speakerVol = parseFloat(document.getElementById("speakerVol").value);
+    let portVol = parseFloat(document.getElementById("portVol").value);
 
-let height=parseFloat(document.getElementById("height").value);
-let width=parseFloat(document.getElementById("width").value);
-let depth=parseFloat(document.getElementById("depth").value);
-let thickness=parseFloat(document.getElementById("thickness").value);
+    let netVolumeLiters = volumeLiters + speakerVol + portVol;
 
-let fb=parseFloat(document.getElementById("fb").value);
-let portType=document.getElementById("portType").value;
-let diameter=parseFloat(document.getElementById("diameter").value);
-let slotHeight=parseFloat(document.getElementById("slotHeight").value);
+    let netVolumeCm3 = netVolumeLiters * 1000;
 
-if(!height||!width||!depth||!thickness||!fb){alert("Completează toate datele!");return;}
+    let depth = netVolumeCm3 / (width * height);
 
-let internalH=(height-(2*thickness))/10;
-let internalW=(width-(2*thickness))/10;
-let internalD=(depth-(2*thickness))/10;
+    document.getElementById("output").innerHTML =
+    `
+    Adâncime calculată: <b>${depth.toFixed(2)} cm</b><br>
+    Volum brut: ${netVolumeLiters.toFixed(2)} L<br>
+    Volum net final: ${volumeLiters} L
+    `;
 
-let vb=(internalH*internalW*internalD)/1000; // litri
+    if(box) scene.remove(box);
 
-let S,Deq;
-
-if(portType=="round"){
-if(!diameter){alert("Introdu diametrul!");return;}
-let dcm=diameter/10;
-S=Math.PI*Math.pow(dcm/2,2);
-}else{
-if(!slotHeight){alert("Introdu înălțimea slotului!");return;}
-let sh=slotHeight/10;
-S=sh*internalW;
+    let geometry = new THREE.BoxGeometry(width, height, depth);
+    let material = new THREE.MeshStandardMaterial({color:0x00c6ff, metalness:0.3, roughness:0.4});
+    box = new THREE.Mesh(geometry, material);
+    scene.add(box);
 }
 
-Deq=Math.sqrt((4*S)/Math.PI);
-
-let portLength=((23562.5*Math.pow(Deq,2))/(Math.pow(fb,2)*vb))-(0.85*Deq);
-
-let recommendedV=vas*Math.pow(qts,2.87);
-
-// Estimare viteză aer
-let Sd_m2=sd/10000;
-let xmax_m=xmax/1000;
-let portArea_m2=S/10000;
-
-let airVelocity=(Sd_m2*xmax_m*2*Math.PI*fb)/portArea_m2;
-
-let velocityStatus="";
-if(airVelocity>17){
-velocityStatus="<span class='warning'>ATENȚIE: Viteza aer prea mare!</span>";
-}else{
-velocityStatus="<span class='ok'>Viteza aer OK</span>";
+function animate(){
+    requestAnimationFrame(animate);
+    renderer.render(scene,camera);
 }
+animate();
 
-document.getElementById("result").innerHTML=
-"<b>Volum intern real:</b> "+vb.toFixed(1)+" L<br><br>"+
-"<b>Volum recomandat (aprox):</b> "+recommendedV.toFixed(1)+" L<br><br>"+
-"<b>Lungime port:</b> "+portLength.toFixed(1)+" cm<br>"+
-"<b>Diametru echivalent:</b> "+Deq.toFixed(1)+" cm<br><br>"+
-"<b>Viteză aer în port:</b> "+airVelocity.toFixed(1)+" m/s<br>"+
-velocityStatus;
+calculate();
 
-}
 </script>
 
 </body>
