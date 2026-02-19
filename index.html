@@ -3,34 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Advanced Box & Port Calculator PRO+</title>
+<title>BOX & PORT CALCULATOR EXPERT</title>
 <style>
-body{font-family:Arial;background:#111;color:#fff;margin:0;padding:20px}
-.container{max-width:700px;margin:auto;background:#1c1c1c;padding:20px;border-radius:10px}
-h2{margin-top:25px;border-bottom:1px solid #333;padding-bottom:5px}
+body{font-family:Arial;background:#0f0f0f;color:#fff;margin:0;padding:20px}
+.container{max-width:750px;margin:auto;background:#1b1b1b;padding:20px;border-radius:10px}
+h2{border-bottom:1px solid #333;padding-bottom:5px}
 input,select,button{width:100%;padding:8px;margin:5px 0;background:#222;color:#fff;border:none;border-radius:5px}
 button{background:#00c853;font-weight:bold;cursor:pointer}
-.result{background:#000;padding:15px;margin-top:15px;border-radius:8px;font-size:16px}
+.result{background:#000;padding:15px;margin-top:15px;border-radius:8px}
+.warning{color:#ff5252;font-weight:bold}
+.ok{color:#00e676;font-weight:bold}
 </style>
 </head>
 <body>
 
 <div class="container">
-<h1>BOX + PORT CALCULATOR PRO+</h1>
+<h1>BOX + PORT CALCULATOR EXPERT (mm)</h1>
 
 <h2>Parametri Difuzor</h2>
 <input type="number" id="fs" placeholder="Fs (Hz)">
 <input type="number" id="vas" placeholder="Vas (litri)">
 <input type="number" id="qts" placeholder="Qts">
+<input type="number" id="sd" placeholder="Sd (cm²)">
 <input type="number" id="xmax" placeholder="Xmax (mm)">
 <input type="number" id="rms" placeholder="Putere RMS (W)">
 
-<h2>Setări Incintă</h2>
-<input type="number" id="vb" placeholder="Volum dorit (litri)">
-<input type="number" id="fb" placeholder="Frecvență acord (Hz)">
-<input type="number" id="height" placeholder="Înălțime externă (cm)">
-<input type="number" id="width" placeholder="Lățime externă (cm)">
+<h2>Dimensiuni Externe Incintă (mm)</h2>
+<input type="number" id="height" placeholder="Înălțime (mm)">
+<input type="number" id="width" placeholder="Lățime (mm)">
+<input type="number" id="depth" placeholder="Adâncime (mm)">
 <input type="number" id="thickness" placeholder="Grosime material (mm)">
+
+<h2>Setări Acord</h2>
+<input type="number" id="fb" placeholder="Frecvență acord (Hz)">
 
 <h2>Tip Port</h2>
 <select id="portType">
@@ -38,8 +43,8 @@ button{background:#00c853;font-weight:bold;cursor:pointer}
 <option value="slot">Slot</option>
 </select>
 
-<input type="number" id="diameter" placeholder="Diametru port (cm) - pentru rotund">
-<input type="number" id="slotHeight" placeholder="Înălțime slot (cm) - pentru slot">
+<input type="number" id="diameter" placeholder="Diametru port (mm) - rotund">
+<input type="number" id="slotHeight" placeholder="Înălțime slot (mm) - slot">
 
 <button onclick="calculate()">CALCULEAZĂ</button>
 
@@ -50,34 +55,40 @@ button{background:#00c853;font-weight:bold;cursor:pointer}
 <script>
 function calculate(){
 
-let fs=parseFloat(document.getElementById("fs").value);
 let vas=parseFloat(document.getElementById("vas").value);
 let qts=parseFloat(document.getElementById("qts").value);
-let vb=parseFloat(document.getElementById("vb").value);
-let fb=parseFloat(document.getElementById("fb").value);
+let sd=parseFloat(document.getElementById("sd").value);
+let xmax=parseFloat(document.getElementById("xmax").value);
+let rms=parseFloat(document.getElementById("rms").value);
+
 let height=parseFloat(document.getElementById("height").value);
 let width=parseFloat(document.getElementById("width").value);
-let thickness=parseFloat(document.getElementById("thickness").value)/10; // mm to cm
+let depth=parseFloat(document.getElementById("depth").value);
+let thickness=parseFloat(document.getElementById("thickness").value);
+
+let fb=parseFloat(document.getElementById("fb").value);
 let portType=document.getElementById("portType").value;
 let diameter=parseFloat(document.getElementById("diameter").value);
 let slotHeight=parseFloat(document.getElementById("slotHeight").value);
 
-if(!vb||!fb||!height||!width){alert("Completează datele!");return;}
+if(!height||!width||!depth||!thickness||!fb){alert("Completează toate datele!");return;}
 
-let internalH=height-(2*thickness);
-let internalW=width-(2*thickness);
+let internalH=(height-(2*thickness))/10;
+let internalW=(width-(2*thickness))/10;
+let internalD=(depth-(2*thickness))/10;
 
-let depth=(vb*1000)/(internalH*internalW);
-let externalDepth=depth+(2*thickness);
+let vb=(internalH*internalW*internalD)/1000; // litri
 
 let S,Deq;
 
 if(portType=="round"){
 if(!diameter){alert("Introdu diametrul!");return;}
-S=Math.PI*Math.pow(diameter/2,2);
+let dcm=diameter/10;
+S=Math.PI*Math.pow(dcm/2,2);
 }else{
 if(!slotHeight){alert("Introdu înălțimea slotului!");return;}
-S=slotHeight*internalW;
+let sh=slotHeight/10;
+S=sh*internalW;
 }
 
 Deq=Math.sqrt((4*S)/Math.PI);
@@ -86,12 +97,28 @@ let portLength=((23562.5*Math.pow(Deq,2))/(Math.pow(fb,2)*vb))-(0.85*Deq);
 
 let recommendedV=vas*Math.pow(qts,2.87);
 
+// Estimare viteză aer
+let Sd_m2=sd/10000;
+let xmax_m=xmax/1000;
+let portArea_m2=S/10000;
+
+let airVelocity=(Sd_m2*xmax_m*2*Math.PI*fb)/portArea_m2;
+
+let velocityStatus="";
+if(airVelocity>17){
+velocityStatus="<span class='warning'>ATENȚIE: Viteza aer prea mare!</span>";
+}else{
+velocityStatus="<span class='ok'>Viteza aer OK</span>";
+}
+
 document.getElementById("result").innerHTML=
+"<b>Volum intern real:</b> "+vb.toFixed(1)+" L<br><br>"+
 "<b>Volum recomandat (aprox):</b> "+recommendedV.toFixed(1)+" L<br><br>"+
-"<b>Adâncime internă:</b> "+depth.toFixed(2)+" cm<br>"+
-"<b>Adâncime externă:</b> "+externalDepth.toFixed(2)+" cm<br><br>"+
-"<b>Lungime port:</b> "+portLength.toFixed(2)+" cm<br>"+
-"<b>Diametru echivalent:</b> "+Deq.toFixed(2)+" cm";
+"<b>Lungime port:</b> "+portLength.toFixed(1)+" cm<br>"+
+"<b>Diametru echivalent:</b> "+Deq.toFixed(1)+" cm<br><br>"+
+"<b>Viteză aer în port:</b> "+airVelocity.toFixed(1)+" m/s<br>"+
+velocityStatus;
+
 }
 </script>
 
