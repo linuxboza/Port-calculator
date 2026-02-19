@@ -2,7 +2,8 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<title>Configurator Incintă Audio Pro</title>
+<title>Configurator Incintă PRO</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
 
@@ -15,57 +16,64 @@ body{
     display:flex;
 }
 #ui{
-    width:350px;
+    width:370px;
     padding:25px;
-    background:rgba(0,0,0,0.5);
-    backdrop-filter:blur(10px);
+    background:rgba(0,0,0,0.55);
+    backdrop-filter:blur(12px);
+    overflow-y:auto;
 }
+h2{margin-top:0}
 input{
     width:100%;
     padding:8px;
     margin:5px 0 15px 0;
     border:none;
-    border-radius:5px;
+    border-radius:6px;
 }
 button{
     width:100%;
-    padding:10px;
+    padding:12px;
     background:#00c6ff;
     border:none;
-    border-radius:5px;
+    border-radius:6px;
     font-weight:bold;
     cursor:pointer;
 }
 #output{
     margin-top:20px;
     font-size:14px;
+    line-height:1.6em;
 }
-canvas{
-    flex:1;
-}
+canvas{flex:1;}
 </style>
 </head>
 <body>
 
 <div id="ui">
-<h2>Configurator Incintă 3D</h2>
+<h2>Configurator Incintă Bass Reflex PRO</h2>
 
-<label>Lățime (cm)</label>
-<input id="width" type="number" value="50">
+<label>Lățime externă (cm)</label>
+<input id="width" type="number" value="60">
 
-<label>Înălțime (cm)</label>
+<label>Înălțime externă (cm)</label>
 <input id="height" type="number" value="40">
 
-<label>Volum dorit (litri)</label>
+<label>Volum NET dorit (litri)</label>
 <input id="volume" type="number" value="100">
+
+<label>Frecvență acordare (Hz)</label>
+<input id="fb" type="number" value="32">
+
+<label>Putere RMS (W)</label>
+<input id="rms" type="number" value="800">
 
 <label>Volum difuzor (litri)</label>
 <input id="speakerVol" type="number" value="2">
 
-<label>Volum port slot (litri)</label>
-<input id="portVol" type="number" value="5">
+<label>Grosime MDF (mm)</label>
+<input id="mdf" type="number" value="18">
 
-<button onclick="calculate()">Calculează</button>
+<button onclick="calculate()">Calculează PRO</button>
 
 <div id="output"></div>
 </div>
@@ -73,48 +81,82 @@ canvas{
 <script>
 
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
 let renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth-350, window.innerHeight);
+renderer.setSize(window.innerWidth-370, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 let controls = new THREE.OrbitControls(camera, renderer.domElement);
-camera.position.z = 200;
+camera.position.set(150,120,200);
 
-let box;
-
-let light = new THREE.PointLight(0xffffff,1);
-light.position.set(100,100,100);
+let light = new THREE.PointLight(0xffffff,1.2);
+light.position.set(200,200,200);
 scene.add(light);
+
+let boxMesh, portMesh;
 
 function calculate(){
 
-    let width = parseFloat(document.getElementById("width").value);
-    let height = parseFloat(document.getElementById("height").value);
-    let volumeLiters = parseFloat(document.getElementById("volume").value);
-    let speakerVol = parseFloat(document.getElementById("speakerVol").value);
-    let portVol = parseFloat(document.getElementById("portVol").value);
+    let width = parseFloat(widthInput.value);
+    let height = parseFloat(heightInput.value);
+    let volumeNet = parseFloat(volumeInput.value);
+    let fb = parseFloat(fbInput.value);
+    let rms = parseFloat(rmsInput.value);
+    let speakerVol = parseFloat(speakerVolInput.value);
+    let mdf = parseFloat(mdfInput.value)/10;
 
-    let netVolumeLiters = volumeLiters + speakerVol + portVol;
+    // Suprafață port automată (0.18 cm² per W)
+    let portArea = rms * 0.18;
 
-    let netVolumeCm3 = netVolumeLiters * 1000;
+    // Formula lungime port (Helmholtz simplificat)
+    let L = ((23562.5 * portArea) / (Math.pow(fb,2) * volumeNet)) - (0.732 * Math.sqrt(portArea));
 
-    let depth = netVolumeCm3 / (width * height);
+    if(L < 5) L = 5;
 
-    document.getElementById("output").innerHTML =
-    `
-    Adâncime calculată: <b>${depth.toFixed(2)} cm</b><br>
-    Volum brut: ${netVolumeLiters.toFixed(2)} L<br>
-    Volum net final: ${volumeLiters} L
+    // Dimensiuni slot
+    let portHeight = 6;
+    let portWidth = portArea / portHeight;
+
+    // Volum port
+    let portVol = (portWidth * portHeight * L) / 1000;
+
+    // Volum brut
+    let volumeBrut = volumeNet + speakerVol + portVol;
+
+    let depth = (volumeBrut * 1000) / (width * height);
+
+    output.innerHTML = `
+    Suprafață port: <b>${portArea.toFixed(1)} cm²</b><br>
+    Dimensiune slot: ${portWidth.toFixed(1)}cm x ${portHeight}cm<br>
+    Lungime port: <b>${L.toFixed(1)} cm</b><br>
+    Volum port: ${portVol.toFixed(2)} L<br>
+    Adâncime externă: <b>${depth.toFixed(1)} cm</b>
     `;
 
-    if(box) scene.remove(box);
+    if(boxMesh) scene.remove(boxMesh);
+    if(portMesh) scene.remove(portMesh);
 
-    let geometry = new THREE.BoxGeometry(width, height, depth);
-    let material = new THREE.MeshStandardMaterial({color:0x00c6ff, metalness:0.3, roughness:0.4});
-    box = new THREE.Mesh(geometry, material);
-    scene.add(box);
+    let boxGeo = new THREE.BoxGeometry(width, height, depth);
+    let boxMat = new THREE.MeshStandardMaterial({color:0x00c6ff, metalness:0.3, roughness:0.4, transparent:true, opacity:0.85});
+    boxMesh = new THREE.Mesh(boxGeo, boxMat);
+    scene.add(boxMesh);
+
+    let portGeo = new THREE.BoxGeometry(portWidth, portHeight, L);
+    let portMat = new THREE.MeshStandardMaterial({color:0xff5500});
+    portMesh = new THREE.Mesh(portGeo, portMat);
+
+    portMesh.position.set(0, -height/2 + portHeight/2, depth/2 - L/2);
+    scene.add(portMesh);
 }
+
+let widthInput = document.getElementById("width");
+let heightInput = document.getElementById("height");
+let volumeInput = document.getElementById("volume");
+let fbInput = document.getElementById("fb");
+let rmsInput = document.getElementById("rms");
+let speakerVolInput = document.getElementById("speakerVol");
+let mdfInput = document.getElementById("mdf");
+let output = document.getElementById("output");
 
 function animate(){
     requestAnimationFrame(animate);
@@ -125,6 +167,5 @@ animate();
 calculate();
 
 </script>
-
 </body>
 </html>
